@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgileFingars Auto Typer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --indigo: #6366f1;
+      --indigo-light: #818cf8;
+      --bg: #07070d;
+      --surface: #0e0e18;
+      --border: rgba(255,255,255,0.07);
+      --text: #e2e4ff;
+      --muted: rgba(255,255,255,0.3);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── GLOW BLOBS ── */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.12;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 600px; height: 600px; background: #6366f1; top: -200px; left: -100px; }
+    .blob-2 { width: 400px; height: 400px; background: #a855f7; bottom: -100px; right: -100px; }
+
+    /* ── LAYOUT ── */
+    main {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      gap: 0;
+    }
+
+    /* ── BADGE ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(99,102,241,0.1);
+      border: 1px solid rgba(99,102,241,0.25);
+      border-radius: 999px;
+      padding: 5px 14px;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--indigo-light);
+      margin-bottom: 28px;
+    }
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 8px #4ade80;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── HEADING ── */
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(42px, 8vw, 80px);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      text-align: center;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #fff 30%, rgba(255,255,255,0.4));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    h1 span {
+      background: linear-gradient(135deg, var(--indigo), #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 0.02em;
+      margin-bottom: 56px;
+      max-width: 380px;
+      line-height: 1.8;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 40px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
+
+    /* ── STEP ── */
+    .steps {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      line-height: 1.6;
+    }
+    .step-num {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.3);
+      color: var(--indigo-light);
+      font-size: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── BOOKMARKLET BUTTON ── */
+    .bm-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .bm-label {
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.2);
+    }
+
+    #bm-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff;
+      font: 600 13px 'DM Mono', monospace;
+      letter-spacing: 0.08em;
+      padding: 14px 28px;
+      border-radius: 12px;
+      text-decoration: none;
+      cursor: grab;
+      box-shadow: 0 8px 32px rgba(99,102,241,0.4), 0 0 0 1px rgba(255,255,255,0.1) inset;
+      transition: transform 0.15s, box-shadow 0.15s;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+    #bm-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      pointer-events: none;
+    }
+    #bm-btn:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 12px 40px rgba(99,102,241,0.5), 0 0 0 1px rgba(255,255,255,0.15) inset;
+    }
+    #bm-btn:active { cursor: grabbing; transform: scale(0.98); }
+
+    .bm-icon { font-size: 16px; }
+
+    .bm-hint {
+      font-size: 9px;
+      color: rgba(255,255,255,0.15);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .bm-hint::before, .bm-hint::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+    }
+
+    /* ── FEATURES ── */
+    .features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+      margin-top: 8px;
+    }
+    .feature {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 10px;
+      color: rgba(255,255,255,0.3);
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .feature-icon { font-size: 13px; }
+
+    /* ── SHORTCUTS ── */
+    .shortcuts {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .kbd {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 9px;
+      color: rgba(255,255,255,0.3);
+      letter-spacing: 0.08em;
+    }
+    .kbd span { color: var(--indigo-light); }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      margin-top: 40px;
+      font-size: 9px;
+      color: rgba(255,255,255,0.1);
+      letter-spacing: 0.1em;
+      text-align: center;
+    }
+
+    /* ── DRAG ANIMATION ── */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    .float { animation: float 3s ease-in-out infinite; }
+
+    /* ── ARROW ── */
+    .arrow {
+      font-size: 20px;
+      color: rgba(255,255,255,0.1);
+      animation: float 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+
+  <main>
+    <div class="badge">
+      <div class="badge-dot"></div>
+      AgileFingars Auto Typer
+    </div>
+
+    <h1>Type at any<br><span>WPM.</span></h1>
+
+    <p class="subtitle">
+      A bookmarklet that auto-types for you on AgileFingars.<br>
+      Accurate, fast, and undetectable.
+    </p>
+
+    <div class="card">
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <span>Make sure your <b style="color:rgba(255,255,255,0.6)">bookmarks bar is visible</b> — press <code style="color:var(--indigo-light)">Ctrl+Shift+B</code></span>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <span>Drag the button below to your <b style="color:rgba(255,255,255,0.6)">bookmarks bar</b></span>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <span>Go to <b style="color:rgba(255,255,255,0.6)">agilefingers.com</b>, start an exercise, and click the bookmark</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="bm-wrap">
+        <div class="bm-label">Drag this to your bookmarks bar</div>
+        <div class="arrow">↓</div>
+        <a id="bm-btn" class="float" href="javascript:(function(){var c=localStorage.getItem('at_cache'),t=localStorage.getItem('at_time');if(c&&t&&Date.now()-t<3600000){eval(c)}else{fetch('https://raw.githubusercontent.com/Jekkrmoeder23/ddddd/refs/heads/main/agilefingers_autotyper%20(14).js').then(r=>r.text()).then(function(s){localStorage.setItem('at_cache',s);localStorage.setItem('at_time',Date.now());eval(s)})}})()">
+          <span class="bm-icon">⌨</span>
+          AF Auto Typer
+        </a>
+        <div class="bm-hint">drag · drop · done</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="features">
+        <div class="feature"><span class="feature-icon">🎯</span> WPM lock</div>
+        <div class="feature"><span class="feature-icon">✋</span> Manual mode</div>
+        <div class="feature"><span class="feature-icon">📊</span> Accuracy tracker</div>
+        <div class="feature"><span class="feature-icon">⏱</span> Session timer</div>
+        <div class="feature"><span class="feature-icon">📈</span> Progress bar</div>
+        <div class="feature"><span class="feature-icon">🔒</span> Keyboard block</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="shortcuts">
+        <div class="kbd"><span>Alt+H</span> toggle panel</div>
+        <div class="kbd"><span>Alt+T</span> start/stop</div>
+        <div class="kbd"><span>Alt+M</span> manual</div>
+        <div class="kbd"><span>Alt+Shift+P</span> kill</div>
+      </div>
+
+    </div>
+
+    <!-- Cache clear bookmarklet -->
+    <div style="margin-top:16px;font-size:9px;color:rgba(255,255,255,0.12);letter-spacing:0.08em;text-align:center">
+      Also save this one: 
+      <a href="javascript:localStorage.removeItem('at_cache');localStorage.removeItem('at_time');alert('Cache cleared!');"
+         style="color:rgba(99,102,241,0.5);text-decoration:none">
+        Clear Cache
+      </a>
+      — drag it too
+    </div>
+
+  </main>
+
+  <footer>
+    works on agilefingers.com &nbsp;·&nbsp; built with js &nbsp;·&nbsp; host on github pages
+  </footer>
+
+  <script>
+    // Prevent click navigation on the bookmarklet button (it's meant to be dragged)
+    document.getElementById('bm-btn').addEventListener('click', function(e) {
+      e.preventDefault();
+      // Show a little tooltip
+      var tip = document.createElement('div');
+      tip.textContent = '👆 Drag me to your bookmarks bar!';
+      tip.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#0e0e18;border:1px solid rgba(99,102,241,0.4);border-radius:8px;padding:8px 16px;font:11px "DM Mono",monospace;color:#818cf8;z-index:999;letter-spacing:0.08em;box-shadow:0 4px 20px rgba(0,0,0,0.5)';
+      document.body.appendChild(tip);
+      setTimeout(function() { tip.remove(); }, 2000);
+    });
+  </script>
+</body>
+</html>
